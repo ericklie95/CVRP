@@ -1,0 +1,43 @@
+Time per seconds. Inside brackets are total distance.
+
+att48.vrp: (Vehicle number 4)
+A:0.161729097366 (48590)
+H:0.801643848419 (43085)
+E:4.988 (40002)
+
+eil22.vrp:
+A:0.0271170139313 (433) : 5 vehicles
+H:0.11036491394 (387) : 4 vehicles
+E:0.028 (375) : 4 vehicles
+
+
+eil23.vrp:
+A:0.0338370800018 (550) : 4 vehicles
+H: 0.12978887558 (577): 3 vehicles
+E: 0.024 (569) : 3 vehicles
+
+eil30.vrp:
+A: 0.0833330154419 (542) : 4 vehicles
+H: 0.500641107559 (531) : 4 vehicles
+E: 0.018 (503) : 4 vehicles
+
+eil33.vrp:
+A: 0.116888999939 (776) : 5 vehicles
+H: 0.566550970078 (841) : 4 vehicles
+E: 0.280 (835) : 4 vehicles
+
+eil51.vp:
+A: 0.342736005783 (617) : 6 vehicles
+H: 2.06862902641 (582) : 5 vehicles
+E: 11.923 (521) :  5 vehicles
+
+
+eilb76.vrp:
+A: 2.65070199966 (919) : 15 vehicles
+H: 18.592813015 (1053) : 15 vehicles
+E: Timeout
+
+
+
+
+

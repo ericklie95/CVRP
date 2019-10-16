@@ -1,0 +1,670 @@
+import sys, time, os, random
+from PyQt4 import QtGui, QtCore
+
+# These two imports needed for message box.
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+
+# For plotting
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
+import matplotlib.pyplot as plt
+
+# For plotting the line
+import matplotlib.cm as cm
+import numpy as np
+
+import os.path
+
+# For timeout!
+import signal
+
+# Required for Approximate Algorithm
+from reading_file import Read_File
+from approximateAlgorithm import approximateAlgorithm
+
+# Required for heuristic algorithm
+from project import data_input, util
+from project.solvers import binary_mcscws
+from project.solvers import clarke_wright
+
+class myGUI(QtGui.QWidget):
+	def __init__(self):
+		super(myGUI, self).__init__()
+		
+		# Reset variables changed when algorithm runs
+		self.resetValues()
+	
+		# Figure instance to plot on
+		self.figure = plt.figure()
+		self.ax = self.figure.add_subplot(111)
+
+		self.canvas = FigureCanvas(self.figure)
+		self.toolbar = NavigationToolbar(self.canvas, self)
+
+		vBoxLayout = self.makeButton()
+
+		# The window
+		self.setWindowTitle('FIT 3036')
+		self.showMaximized()
+
+		# Making layout.
+		# This is second row of layout
+		layout = QHBoxLayout()
+		layout.addLayout(vBoxLayout)
+		layout.addWidget(self.canvas)
+		# This is first row of layout
+		vLayout = QVBoxLayout()
+		vLayout.addWidget(self.toolbar)
+		vLayout.addLayout(layout)
+		self.setLayout(vLayout)
+
+		self.show()
+
+	def resetValues(self):
+		self.distance_1 = 0
+		self.distance_2 = 0
+		self.distance_3 = 0
+	
+		self.time_1 = 0.0
+		self.time_2 = 0.0
+		self.time_3 = 0.0
+
+		self.routeList_1 = []
+		self.routeList_2 = []
+		self.routeList_3 = []  
+
+		self.filename = ""
+		self.rf = None
+
+		self.timeout = 300
+	def redrawAndFinishMsg(self,routeList,time,distance,f):
+		# Clear the lines
+		while len(self.ax.lines)>0:
+			self.ax.lines.pop(0)		
+
+		# plot the line and draw
+		self.plotLine(routeList)
+		self.canvas.draw()
+
+		# Show MsgBox
+		string = "Succeed!\nFinished in "+str(time)+" seconds.\nDistance is: "+str(distance)+"\nOutput file: "+f
+		self.showMsgBox(string,"Succeed!")
+
+	def resetAll(self):
+		self.resetValues()
+
+		# Clear the lines
+		while len(self.ax.lines)>0:
+			self.ax.lines.pop(0)
+
+		# Clear the dots
+		plt.cla()
+
+		# Empty the line edit
+		self.le.setText("")
+		self.leTime.setText(str(self.timeout))
+
+		self.canvas.draw()
+
+		self.showMsgBox("All have been reset!","Reset successful")
+
+	def makeButton(self):
+		# Making first button for user to click
+		btn = QtGui.QPushButton('Filename',self)
+		btn.move(20,40)
+		btn.clicked.connect(self.showDialog)
+		width = btn.fontMetrics().boundingRect(btn.text()).width() + 7
+		btn.setMaximumWidth(width)
+
+		# This would be the bar where user could see their input
+		self.le = QtGui.QLineEdit(self)
+		self.le.move(130,40)
+		self.le.setEnabled(False)
+		width = btn.fontMetrics().boundingRect(btn.text()).width() + 10
+		self.le.setMaximumWidth(width)
+
+		# Making second button for user to click
+		btn2 = QtGui.QPushButton('First algorithm',self)
+		btn2.move(20,80)
+		btn2.clicked.connect(self.firstAlgClicked)
+		width = btn2.fontMetrics().boundingRect(btn2.text()).width() + 7
+		btn2.setMaximumWidth(width)
+
+		# Making third button
+		btn3 = QtGui.QPushButton('Second algorithm',self)
+		btn3.move(20,120)
+		btn3.clicked.connect(self.secondAlgClicked)
+		width = btn3.fontMetrics().boundingRect(btn3.text()).width() + 7
+		btn3.setMaximumWidth(width)
+
+		# Making fourth button
+		btn4 = QtGui.QPushButton('Third algorithm',self)
+		btn4.move(20,160)
+		btn4.clicked.connect(self.thirdAlgClicked)
+		width = btn4.fontMetrics().boundingRect(btn4.text()).width() + 7
+		btn4.setMaximumWidth(width)
+
+		# Making compare button
+		btn5 = QtGui.QPushButton('Compare',self)
+		btn5.clicked.connect(self.compareAll)
+		width = btn5.fontMetrics().boundingRect(btn5.text()).width() + 7
+		btn5.setMaximumWidth(width)
+
+		# Making reset button
+		btn6 = QtGui.QPushButton('Reset',self)
+		btn6.clicked.connect(self.resetAll)
+		width = btn6.fontMetrics().boundingRect(btn6.text()).width() + 7
+		btn6.setMaximumWidth(width)
+
+		# Making timeout button
+		btn7 = QtGui.QPushButton('Set Timeout(in secs)',self)
+		btn7.clicked.connect(self.setTimeout)
+		width = btn7.fontMetrics().boundingRect(btn7.text()).width() + 7
+		btn7.setMaximumWidth(width)
+
+		self.leTime = QtGui.QLineEdit(self)
+		self.leTime.setEnabled(False)
+		width = btn.fontMetrics().boundingRect(btn7.text()).width() + 10
+		self.leTime.setMaximumWidth(width)
+		self.leTime.setText(str(self.timeout))
+
+		# Making the layout for all the buttons
+		vbox = QVBoxLayout()
+		vbox.addWidget(btn)
+		vbox.addWidget(self.le)
+		vbox.addWidget(btn7)
+		vbox.addWidget(self.leTime)
+		vbox.addStretch()		
+		vbox.addWidget(btn2)
+		vbox.addWidget(btn3)
+		vbox.addWidget(btn4)
+		vbox.addWidget(btn5)
+		vbox.addWidget(btn6)
+
+		# Configuration of the layout
+		vbox.sizeHint() # sizehint will adjust the size based on items in it.
+
+		return vbox
+
+	def setTimeout(self):
+		text, ok = QtGui.QInputDialog.getText(self, 'Change timeout', 'Type timeout in seconds:')
+		if ok:
+			try:
+				if int(self.text) < 0:
+					a = self.timeout[2]
+				self.timeout = int(text)
+				self.showMsgBox("Timeout now is "+str(self.timeout)+" seconds.","Timeout value")
+				self.leTime.setText(str(self.timeout))
+			except:
+				self.showMsgBox("Please put time more than 0 second!","Time Input Error")
+
+	# This is called when the first button is pushed. We want to show only the customers location at this point.
+	def showDialog(self):
+		text, ok = QtGui.QInputDialog.getText(self, 'Input Dialog', 'Enter file name:')
+		if ok:
+			# If file not found, give a message box
+			if not os.path.isfile("input/"+str(text)):
+				self.showMsgBox("File input/"+str(text)+" not found! Please put your file in directory:\n"+str(os.getcwd())+"/input","File not found")
+			else:
+				# Try to read the file. If it is not CVRP then give an error message.
+				try:
+					# Reset variables
+					self.resetValues()
+
+					# Reset timeout
+					self.leTime.setText(str(self.timeout))
+
+					# The file.
+					self.filename = str(text)
+
+					# My parser to get all the list of customers
+					self.rf = Read_File('input/'+self.filename)
+					self.nodesList = self.rf.getNodeList()
+
+					# Clear the dots
+					plt.cla()
+
+					self.plotNode(self.nodesList)
+
+					self.le.setText(str(text))
+				except Exception,e:
+					self.rf = None ; self.filename = ""
+					self.le.setText("")
+					self.showMsgBox("File is not right. Please double check the file.\n"+str(e),"File error")
+
+
+	def compareAll(self):
+		# Initializing the timeout
+		signal.signal(signal.SIGALRM,self.handler)
+		signal.alarm(self.timeout)
+
+		if self.filename != "":
+			# If not initialized, then run all alg and find the best distance.
+			if self.distance_1 == 0 and self.time_1 == 0.0:
+				alg = approximateAlgorithm()
+				start = time.time()
+				self.routeList_1 = alg.solve(self.rf)
+				self.time_1 = time.time() - start
+				alg.printSol()
+				self.distance_1 = alg.totDist
+			if self.distance_2 == 0 and self.time_2 == 0.0:
+				alg = clarke_wright.ClarkeWrightSolver()
+				data = data_input.read_file('input/'+self.filename)
+				start = time.time()
+				solution = alg.solve(data)
+				self.routeList_2 = self.getRouteListHeuristic(solution, [], data)
+				self.time_2 = time.time() - start
+				self.distance_2 = util.get_totalCost(solution)
+			if self.distance_3 == 0 and self.time_3 == 0.0:
+
+				vehicleNum = 1
+				routeInStr = "Infeasible"
+
+				# If it's not feasible
+				while routeInStr == "Infeasible":	
+					vehicleNum += 1
+					solutionF, fileString = self.sendToTerminal(vehicleNum)	
+					routeInStr, self.time_3 = self.checkFileIsFeasible(solutionF)
+				
+				data = data_input.read_file('input/'+self.filename)
+				self.routeList_3 = self.makeRouteList(routeInStr,vehicleNum,data)					
+
+			msg = "Approximate Algorithm result:\nDistance: "+str(self.distance_1)+". Time spent: "+str(self.time_1)+".\nRoutes:\n"
+			for i in self.routeList_1:
+				msg+= ', '.join(str(j) for j in i)
+				msg+='\n'
+
+
+			msg += "\nHeuristic Algorithm result:\nDistance: "+str(self.distance_2)+". Time spent: "+str(self.time_2)+".\nRoutes:\n"
+			for i in self.routeList_2:
+				msg+= ', '.join(str(j) for j in i)
+				msg+='\n'
+
+			msg += "\nExact Algorithm result:\nDistance: "+str(self.distance_3)+". Time spent: "+str(self.time_3)+".\nRoutes:\n"
+			for i in self.routeList_3:
+				msg+= ', '.join(str(j) for j in i)
+				msg+='\n'
+
+			msg += '\n'
+			minDistance = min(self.distance_1, self.distance_2, self.distance_3)
+			if minDistance == self.distance_1:
+				msg+='Shortest Distance is achieved by Approximate algorithm with: '+str(minDistance)+'km.\n'
+			elif minDistance == self.distance_2:
+				msg+='Shortest Distance is achieved by Heuristic algorithm with: '+str(minDistance)+'km.\n'
+			else:
+				msg+='Shortest Distance is achieved by Exact algorithm with: '+str(minDistance)+'km.\n'
+
+			signal.signal(signal.SIGALRM, self.handlerNone)
+			self.showMsgBoxScrollable(msg,"Result",True)
+		else: # If there is no file given.
+			signal.signal(signal.SIGALRM, self.handlerNone)
+			self.showMsgBox("There is no file to be read. Please give me a file by clicking the button named 'Filename'", "File not given")
+
+		# Show two options, the algorithm that runs the quickest and the efficient distance.			
+
+	def runApproximateAlg(self):
+		start = time.time()
+
+		# Initializing the timeout
+		signal.signal(signal.SIGALRM,self.handler)
+		signal.alarm(self.timeout)
+
+		try:
+			#if self.distance_1 == 0 and self.routeList_1 == []:
+			# --- Aproximate Algorithm ---
+			apprAlg = approximateAlgorithm()
+			self.rf = Read_File('input/'+self.filename)
+			self.routeList_1 = apprAlg.solve(self.rf)
+			newFilename = 'output/'+self.filename+'-firstAlg'
+			end = time.time() - start
+			outputFileName = self.writeToFile(newFilename,apprAlg.printSol(),end)
+
+			# get variables changed
+			self.distance_1 = apprAlg.totDist
+			self.time_1 = end
+
+			# turn off the signal.
+			signal.signal(signal.SIGALRM, self.handlerNone)
+			self.redrawAndFinishMsg(self.routeList_1,self.time_1,self.distance_1,outputFileName)			
+		except Exception, exc:
+			print exc
+
+	def firstAlgClicked(self):
+			
+		# Check if self.rf is not none. If it gives an error, it means there is no file to be read.		
+		try:
+			if self.rf:
+				self.runApproximateAlg()
+			else:
+				self.showMsgBox("There is no file to be read. Please give me a file by clicking the button named 'Filename'", "File not given")
+		except:
+			self.showMsgBox("There is no file to be read. Please give me a file by clicking the button named 'Filename'", "File not given")
+
+	def getRouteListHeuristic(self, sol, retList, data):
+		gen = util.print_solution(sol)
+		for i in gen:
+			tmpList = []
+			tmpList.append(int(data.depot().name()))
+			for j in i:
+				tmpList.append(int(j.name()))
+			retList.append(tmpList)
+		return retList
+
+	def runHeurAlg(self):
+		start = time.time()
+
+		# Initializing the timeout
+		signal.signal(signal.SIGALRM,self.handler)
+		signal.alarm(int(self.timeout))
+
+
+		try:	
+			# --- Heuristic Algorithm ---
+			heurAlg = clarke_wright.ClarkeWrightSolver()
+			data = data_input.read_file('input/'+self.filename)
+	    		solution = heurAlg.solve(data)
+			end = time.time() - start
+			outputFileName = self.writeToFile('output/'+self.filename+"-secondAlg",util.print_solution_string(solution),end)
+			self.routeList_2 = self.getRouteListHeuristic(solution, [], data)
+
+			# Change the variables
+			self.distance_2 = util.get_totalCost(solution)
+			self.time_2 = end
+
+			# turn off the signal.
+			signal.signal(signal.SIGALRM, self.handlerNone)
+
+			self.redrawAndFinishMsg(self.routeList_2,self.time_2,self.distance_2,outputFileName)
+		except Exception, exc:
+			print exc
+
+	def secondAlgClicked(self):
+		# Check if self.rf is not none. If it gives an error, it means there is no file to be read or the customer nodes have not been plot!		
+		try:
+			if self.rf:
+				self.runHeurAlg()
+			else:
+				self.showMsgBox("There is no file to be read. Please give me a file by clicking the button named 'Filename'", "File not given")
+		except:
+			self.showMsgBox("There is no file to be read. Please give me a file by clicking the button named 'Filename'", "File not given")	
+
+
+	def runExactAlg(self):
+		try:
+			inputDialog = QtGui.QInputDialog(self)
+			text, ok = inputDialog.getText(self,'Input Vehicle Number', 'Enter vehicle number:')
+			# Start Branch and bound algorithm
+
+			#text, ok = QtGui.QInputDialog.getText(self, 'Input Vehicle Number', 'Enter vehicle number:')
+			if ok:
+				solutionF, fileString = self.sendToTerminal(text)
+
+				if solutionF == 0 or text == "":
+					self.showMsgBox("Please give number for the vehicle number!","Vehicle numbers input")
+				elif int(text) < 1:
+					self.showMsgBox("Please give positive number for vehicle number.","Vehicle numbers input wrong")
+				else:
+					import time
+					start = time.time()
+
+					# Initializing the timeout
+					signal.signal(signal.SIGALRM,self.handler)
+					signal.alarm(self.timeout)
+
+					# Check if feasible
+					routeInStr, time = self.checkFileIsFeasible(solutionF)
+
+					# If it's not feasible, give message box
+					if routeInStr == "Infeasible":
+						signal.signal(signal.SIGALRM, self.handlerNone)
+						self.showMsgBox("Solution is not feasible. Try to add/reduce more vehicles!","Invalid vehicles number")
+					else:
+						data = data_input.read_file('input/'+self.filename)
+						self.routeList_3 = self.makeRouteList(routeInStr,text,data)					
+						signal.signal(signal.SIGALRM, self.handlerNone)
+						self.redrawAndFinishMsg(self.routeList_3,self.time_3,self.distance_3,fileString)
+					
+		except Exception, exc:
+			print exc
+
+	def thirdAlgClicked(self):
+		# Check if self.rf is not none. If it gives an error, it means there is no file to be read.		
+		try:
+			if self.rf:
+				self.runExactAlg()
+			else:
+				self.showMsgBox("There is no file to be read. Please give me a file by clicking the button named 'Filename'", "File not given")
+		except:
+			self.showMsgBox("There is no file to be read. Please give me a file by clicking the button named 'Filename'", "File not given")	
+
+	def sendToTerminal(self,vehicleNum):
+
+		# Try to check vehicle number if it's a number or not.
+		try:
+			i = int(vehicleNum)
+		except:
+			return 0,0
+
+		# Remove file if exists
+		try:
+			os.remove('output/'+self.filename+"-solution")
+		except:
+			pass
+
+		# Name of the new file
+		solutionFile = 'output/'+str(self.filename)+"-thirdAlg-solution"
+		f = open(solutionFile,'w+')
+		words = '~/Desktop/FIT3036_Ubuntu/SYMPHONY-5.6/SYMPHONY/Applications/VRP/vrp -F '+str('input/'+self.filename)+' -N '+ str(vehicleNum)
+		# Call out to terminal
+		import subprocess
+		self.callToTerminal = subprocess.call(words, stdout=f, shell=True)
+
+		# cloe the write plus file.
+		f.close()
+
+		# Open to read file
+		f = open(solutionFile,'r')
+
+		# REturn the opened file and the filename.
+		return f, solutionFile
+	
+	"""
+	# Read the outout given by SYMPHONY.
+	Infeasible comes only when solution is infeasible, so return it straight away and close the file once its found.
+	Optimal comes only once as well. Once it's found, set the flag so we won't hceck infeasible anymore.
+	Once optimal flag ups, the route allocation would be under the line solution cost.
+	No matter how many vehicles, route will always be under solution cost.
+
+	If there is more than 1 vehicles, the output will provide the word Route.
+	Otherwise , it'll be only a bunch of route.
+
+	This function will read the output line by line!
+	"""
+	def checkFileIsFeasible(self,f):
+		returnSolution = []
+		routeFlag = False
+		optimalFlag = False
+		time = ""
+		for line in f:	
+			if "Total Wallclock Time" in line:
+				words = line.split()
+				time = words[len(words)-1]
+				self.time_3 = float(time)
+			# This if-else condition is to find OPTIMAL / INFEASIBLE solution.
+			if not optimalFlag:		
+				if 'Infeasible' in line:
+					f.close()
+					return "Infeasible",time #yes it's infeasible
+				elif 'Optimal' in line:
+					optimalFlag = True
+			else:
+				if routeFlag:
+					if line != "\n":
+						returnSolution.append(line)
+				elif "Solution Cost" in line:
+					words = line.split()
+					self.distance_3 = float(words[len(words)-1])
+					routeFlag = True
+
+
+		f.close()
+		return returnSolution,time #no, it's feasible
+
+	"""
+	This function will make the routeList for exact algorithm.
+	routeList will be returned as the test. It will onyl return empty list or filled list!
+	"""
+	def makeRouteList(self,routeStr,vehicleNum,data):
+		routeList = []
+		for i in routeStr:
+			tmpList = []
+			
+			for j in i.split():
+				try:
+					if j == "0":
+						j = 0
+						tmpList.append(1)
+					else:
+						tmpList.append(int(j)+1)
+				except:
+					continue
+			# If vehicle is more than 0, Route will be shown, depot won't be inserted.
+			if "Route" in routeStr[0]:
+				tmpList.insert(0,int(data.depot().name()))
+				routeList.append(tmpList)
+
+			else:
+				# If vehicle is 1, the depot is inserted automatically.
+				# We use append to make it LOL, requirement for plotLine
+				routeList.extend(tmpList)
+
+		if vehicleNum == "1":
+			routeList = [routeList]
+
+		return routeList
+			
+	"""
+	# Param:
+	# filename = filename in string
+	# dataToWrite = String!
+	# time = Type of time..
+	"""
+	def writeToFile(self, filename,dataToWrite, time):
+		newFileName = filename+"-solution"
+		
+		# Remove file if exists
+		try:
+			os.remove(newFileName)
+		except:
+			pass
+
+		f = open(newFileName,"w+")
+		f.write(dataToWrite)
+		f.write("\n Time spent: " + str(time) +"\n")
+		f.close()
+
+		return newFileName
+
+	def readFileTimeout(self):
+		pass
+
+
+	def plotNode(self, nodeList):
+		self.xAxis = [] ; self.yAxis = [] ; nodeName = []
+
+		# First of all, get the axis of all the node.
+		for i in nodeList:
+			self.xAxis.append(int(i.x))
+			self.yAxis.append(int(i.y))
+			nodeName.append(i.name)
+
+		# Secondly, adjust the maximum axis
+		self.ax.axis([min(self.xAxis)-min(self.xAxis)/4, max(self.xAxis)+max(self.xAxis)/5, min(self.yAxis)-min(self.yAxis)/4, max(self.yAxis)+max(self.yAxis)/5])
+
+		# Thirdly, plot the nodes
+		self.ax.scatter(self.xAxis, self.yAxis, color='red', label='_nolegend_')
+
+		# Fourthly, plot the name of each nodes
+		for i,txt in enumerate(nodeName):
+			self.ax.annotate(txt, (self.xAxis[i],self.yAxis[i]))
+
+		# Fifthly, refresh the canvas with new plotted nodes!
+		self.canvas.draw()
+
+	def plotLine(self, routeList, length = -1):
+		# routeList = [ [1,2,3,4,..], [...], [...] ] must be list of list!
+		if (length == -1):
+			colors = iter(cm.rainbow(np.linspace(0, 1, len(routeList))))
+		else:
+			colors = iter(cm.rainbow(np.linspace(0, 1, length)))
+		j = 0
+		for j,i in enumerate(routeList):
+			# Go to the next color set.
+			co = next(colors)
+
+			# Get all the nodes of current route
+			xAx, yAx = self.getAxisCurVeh(i)
+
+			# Adding depot so the vehicle goes back
+			xAx.append(xAx[0]) ; yAx.append(yAx[0])
+
+			# draw the line
+			self.ax.plot(xAx,yAx,c=co, label='Vehicle'+str(j+1))
+
+		# Show the legend
+		handles, labels = self.ax.get_legend_handles_labels()
+		lgd = self.ax.legend(loc='upper center',ncol=j/2,bbox_to_anchor=(1,0.5))
+		if lgd:
+			lgd.draggable()
+
+	def getAxisCurVeh(self, routeList):
+		# routeList = [1,2,3,4,5,...]
+		xAx = [] ; yAx = []
+		for i in routeList:
+			xAx.append(self.xAxis[int(i)-1])
+			yAx.append(self.yAxis[int(i)-1])
+		return xAx, yAx
+
+	def handler(self, signum, frame):
+		self.showMsgBox("End of time, algorithm interrupted","Timeout")
+		raise Exception("End of time, algorithm interrupted")
+
+	def handlerNone(self, signum, frame):
+		pass
+
+	def showMsgBox(self, lbl, wdwT):
+		msg = QMessageBox()
+		msg.setIcon(QMessageBox.Information)
+		msg.setText(lbl)
+		msg.setWindowTitle(wdwT)
+		msg.setStandardButtons(QMessageBox.Ok)
+		msg.exec_()	
+
+	def showMsgBoxScrollable(self, lbl, wdwT, scrol):
+		if scrol:
+
+			dialog = QDialog()
+
+			vbox = QVBoxLayout(dialog)
+			
+			scrollArea = QScrollArea()
+			scrollArea.setWidgetResizable(True)
+
+			labl = QLabel()
+			labl.setText(lbl)
+
+			scrollArea.setWidget(labl)
+
+			vbox.addWidget(scrollArea)
+
+			dialog.setWindowTitle('Result')
+			dialog.exec_()	
+
+def main():
+	app = QtGui.QApplication(sys.argv)
+	ex = myGUI()
+	sys.exit(app.exec_())
+
+if __name__ == '__main__':
+	main()

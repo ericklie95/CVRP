@@ -1,0 +1,8 @@
+ ### Approximate Algorithm ### 
+Vehicle 1:1 -> 13 -> 12. Capacity: 525.Distance for this route: 32
+Vehicle 2:1 -> 8 -> 9 -> 5 -> 6 -> 22 -> 19 -> 20 -> 21 -> 23 -> 18 -> 15 -> 17 -> 16 -> 4 -> 3 -> 2 -> 7. Capacity: 4214.Distance for this route: 419
+Vehicle 3:1 -> 10. Capacity: 1100.Distance for this route: 57
+Vehicle 4:1 -> 14 -> 11. Capacity: 4350.Distance for this route: 42
+Total Distance: 550
+ ### End of Approximate Algorithm ### 
+ Time spent: 0.0520360469818

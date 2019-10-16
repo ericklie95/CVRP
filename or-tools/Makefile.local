@@ -1,0 +1,16 @@
+UNIX_PYTHON_VER = 2.7
+UNIX_GFLAGS_DIR = /home/erick/Desktop/FIT3036_Ubuntu/or-tools/dependencies/install
+UNIX_PROTOBUF_DIR = /home/erick/Desktop/FIT3036_Ubuntu/or-tools/dependencies/install
+UNIX_SPARSEHASH_DIR = /home/erick/Desktop/FIT3036_Ubuntu/or-tools/dependencies/install
+UNIX_SWIG_BINARY = /home/erick/Desktop/FIT3036_Ubuntu/or-tools/dependencies/install/bin/swig
+UNIX_CLP_DIR = /home/erick/Desktop/FIT3036_Ubuntu/or-tools/dependencies/install
+UNIX_CBC_DIR = /home/erick/Desktop/FIT3036_Ubuntu/or-tools/dependencies/install
+# Please add glpk-4.57.tar.gz in dependencies/archives to add support for GLPK.
+# Please add scipoptsuite-3.2.1.tgz to dependencies/archives to add support for SCIP.
+UNIX_SCIP_TAG = 3.2.1
+CLR_KEYFILE = bin/or-tools.snk
+UNIX_SULUM_VERSION = 43
+# Please define UNIX_SLM_DIR to use Sulum Optimization.
+# Please define UNIX_GUROBI_DIR and GUROBI_LIB_VERSION to use Gurobi.
+# Please define UNIX_CPLEX_DIR to use CPLEX.
+LINUX_JDK_ROOT =

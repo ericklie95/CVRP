@@ -1,0 +1,8 @@
+ ### Heuristic Algorithm ### 
+[8, 10, 6, 5, 9, 22]: 214
+[14, 11]: 69
+[19, 20, 21, 23, 18, 15, 17, 16, 4, 3, 2, 7, 12, 13]: 294
+
+Total cost: 577 
+### End of Heuristic Algoithm ### 
+ Time spent: 0.147103071213

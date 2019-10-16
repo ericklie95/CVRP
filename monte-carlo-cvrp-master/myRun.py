@@ -1,0 +1,36 @@
+#!/bin/env python
+# -*- coding: utf-8 -*-
+
+import sys
+import time
+import os
+
+from project import data_input, util
+from project.solvers import clarke_wright	
+
+def usage():
+    print "python {} <tspblib_file>".format(sys.argv[0])
+
+def main():
+    if len(sys.argv) < 2: # python main.py <file> <vehicles_number>
+        return usage()
+
+    data = data_input.read_file(sys.argv[1])
+
+    vehicles = 99
+    timeout = 300
+
+    #clarke_wright_solver = clarke_wright.ClarkeWrightSolver()
+    binary_mcscws_solver = binary_mcscws.BinaryMCSCWSSolver()
+
+    start = time.time()
+    solution = binary_mcscws_solver.solve(data, vehicles, timeout)
+    elapsed = time.time() - start
+
+    routeList = util.print_solution(solution)
+    print routeList
+
+    print 'Elapsed time (seconds): {}'.format(elapsed)
+
+if __name__ == '__main__':
+    main()

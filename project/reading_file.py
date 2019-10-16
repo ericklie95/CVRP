@@ -1,0 +1,113 @@
+from Node import Node
+
+class Read_File:
+    def __init__(self,filename):
+        f = open(filename,'r')
+        self.allNodeList = []
+	self.edgeList = []
+        self.capacity = 0
+        self.dimension = 0
+        self.edge_weight_type = ""
+	self.depotIndex = 0
+        self.read_per_line(f)
+        print "Reading file:"+str(filename)
+
+    def read_per_line(self,f):
+        read_coord_flag = False
+        demand_flag = False
+	depot_flag = False
+	read_edge_flag = False
+	type_ = ""
+        for line in f:
+            words = line.split()
+            lastEl = words[len(words)-1]
+            if "TYPE" in words:
+		type_ = str(lastEl)
+                if lastEl != "CVRP":
+                    raise TypeError("File type must be CVRP")
+            elif "DIMENSION" in words:
+                self.dimension = int(lastEl)
+            elif "EDGE_WEIGHT_TYPE" in words:
+                self.edge_weight_type = lastEl
+            elif "CAPACITY" in words:
+                self.capacity = int(lastEl)
+            elif "NODE_COORD_SECTION" in line:
+                read_coord_flag = True
+		continue
+	    elif "EDGE_WEIGHT_SECTION" in line:
+		read_edge_flag = True
+		continue
+            elif "DEMAND_SECTION" in line and read_coord_flag:
+                read_coord_flag = False
+                demand_flag = True
+		continue
+            elif "DEPOT_SECTION" in line and demand_flag:
+                demand_flag = False
+                read_coord_flag = False
+		depot_flag = True
+		continue
+	    elif "EOF" in line and depot_flag:
+		depot_flag = False
+		continue
+            elif read_coord_flag:
+                self.read_coord(line)
+	    elif read_edge_flag:
+		self.read_edge(line)
+            elif demand_flag:
+                self.read_demand(line)
+	    elif depot_flag:
+		self.read_depot(line)
+        if type_ != "CVRP":
+            raise TypeError("File is not of type CVRP.")
+	elif self.dimension != self.getLengthNodeList():
+	    raise TypeError("Dimension and customers are not having the same number!")
+
+    def read_coord(self,line):
+        currentLine = line.split()
+        if len(currentLine) > 2:
+            newNode = Node(*currentLine)
+            self.allNodeList.append(newNode)
+
+    def read_edge(self,line):
+	return "Edge weight section not supported! Can only read Eucl2D at the moment."
+
+    def read_demand(self,line):
+        currentLine = line.split()
+        if len(currentLine) > 1:
+            index = int(currentLine[0])-1
+            self.allNodeList[index].setCapacity(int(currentLine[1]))
+
+    def read_depot(self,line):
+	currentLine = line.split()
+	if currentLine[0] > 0 and int(currentLine[0]) != -1:
+		self.depotIndex = int(currentLine[0])-1
+
+    def getNodeList(self):
+        return self.allNodeList
+
+    def getLengthNodeList(self):
+        return len(self.allNodeList)
+
+    def getNodeListDetails(self):
+        for node in self.allNodeList:
+            print "Name:",node.name," Capacity:",node.capacity
+
+if __name__ == '__main__':	
+	f = Read_File("input/eil23.vrp")
+	print '******* Testing for class reading_file.py *******'
+	print 'Using file input/eil23.vrp'
+	print '### Reading capacity of the file ###'
+	print 'Output: '+ str(f.capacity)+'. Expected: 4500'
+	print '### Checking the number of dimensions ###'
+	print 'Output: '+ str(f.dimension)+'. Expected: 23'
+	print '## Checking the number of customers. Must be the same with dimension! ##'
+	print 'Output: '+ str(f.getLengthNodeList()) +'. Expected: 23'
+	print '## Checking the depot index ##'
+	print 'Output: '+str(f.depotIndex+1)+'. Expected: 1'
+	print '## Checking edge weight type ##'
+	print 'Output: ' + f.edge_weight_type + '. Expected: EUC_2D'
+	print '## Checking the nodes received from the file. Must be of type List of list with elements in type of class Node ##'
+	print 'Output:', f.allNodeList
+	print 'Checking all the name of the nodes. It should be on ascending order.'
+	print 'Output: ', [int(a.name) for a in f.allNodeList]
+	print '******* Finish testing for class reading_file.py *******'
